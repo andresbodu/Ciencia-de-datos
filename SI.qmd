@@ -1,0 +1,213 @@
+---
+title: "Taller 3 Ciencia de datos"
+format: html
+toc: true 
+editor: visual
+author: "Andrés Camilo Bonilla Durango"
+lang: es
+server: shiny
+---
+```{css, echo = FALSE}
+H2{
+  color:  #73E0DF;
+  
+}
+H3{
+  color: #F13CD9
+}
+```
+
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(patchwork)
+library(ggcorrplot)
+library(knitr)
+```
+
+## 1. Contextualización  
+
+La decisión de no utilizar la base de datos relacionada con accidentes de carros del primer taller se basa en dos razones fundamentales. En primer lugar, la falta de correlación significativa entre las variables de la base de datos y la variable objetivo disminuiría la capacidad de generar resultados precisos y predictivos. En segundo lugar, la ausencia de datos relevantes y manejables sobre las circunstancias de los accidentes limitaría la aplicabilidad de cualquier conclusión obtenida, ademas de que la base de datos solo cuenta con variables discretas. 
+
+### 1.1 Evidencia
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE, fig.align='center'}
+datos <- read.csv("Base de datos.csv", header = T)
+g1 <- datos %>% ggplot(aes(x = Count_Fatality, y = Count_Crashes))+ geom_point()
+
+g2 <- datos %>% ggplot(aes(x = Count_Fatality, y = Count_Hospitalised))+ geom_point()
+
+g3 <- datos %>% ggplot(aes(x = Crash_Year, y = Count_Crashes))+ geom_point()
+
+g1+g2+g3
+
+```
+
+
+### 1.2 Nueva base de datos.
+
+La base de datos utilizada para este trabajo es "Japan life expectancy" esta base de datos proporciona información general sobre la esperanza de vida y variables económicas y sociales para cada prefectura de Japón.
+
+Las variable son las siguientes:  
+
+* "Prefecture": Nombre de la prefectura en Japón.
+* "Life_expectancy": Esperanza de vida en años.
+* "Physician": Número de médicos por cada 1,000 habitantes.
+* "Junior_col": Número de colegios de educación secundaria en la prefectura.
+* "University": Número de universidades en la prefectura.
+* "Public_Hosp": Número de hospitales públicos en la prefectura.
+* "Pshic_hosp": Número de hospitales psiquiátricos en la prefectura.
+* "Beds_psic": Número de camas en hospitales psiquiátricos en la prefectura.
+* "Nurses": Número de enfermeras por cada 1,000 habitantes.
+* "Avg_hours": Promedio de horas trabajadas por semana.
+* "Salary": Salario promedio mensual en yenes.
+* "Elementary_school": Número de escuelas primarias en la prefectura.
+* "Sport_fac": Número de instalaciones deportivas en la prefectura.
+* "Park": Número de parques en la prefectura.
+* "Forest": Área forestal en kilómetros cuadrados.
+* "Income_per.capita": Ingreso per cápita en yenes.
+* "Density_pop": Densidad de población por kilómetro cuadrado.
+* "Hospitals": Número total de hospitales en la prefectura.
+* "Beds": Número total de camas en hospitales en la prefectura.
+* "Ambulances": Número de ambulancias en la prefectura.
+* "Health_exp": Gasto en salud per cápita en yenes.
+* "Educ_exp": Gasto en educación per cápita en yenes.
+* "Welfare_exp": Gasto en bienestar per cápita en yenes.
+  
+## 2. Variable dependiente.
+
+Para este trabajo se optó por tomar como variable dependiente la esperanza de vida, debido a que toda la base de datos está construida en torno a esta variable.
+
+### 2.1 Histograma de la esperanza de vida.
+```{r, warning=FALSE,echo=FALSE,message=FALSE, fig.align='center'}
+datos_2 <- read.csv("Japan_life_expectancy.csv", header = T)
+datos_2 %>% ggplot(aes(x=Life_expectancy))+
+  geom_histogram(color="black", fill="#73E0DF")+
+  labs(x= "esperanza de vida", y= "conteo")+
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.position = "none")
+```
+
+
+Este histograma no muestra muy claramente cómo está distribuida la variable de esperanza de vida. Algo que se puede observar es que los datos se dispersan de manera moderada respecto a la media. Por lo tanto, existe una alta posibilidad de que este factor pueda ser explicado por otras variables que causen este ruido o dispersión en ese valor.
+
+## 3. Variables independientes.
+
+Al tratarse de una base de datos con una amplia cantidad de variables, la elección de cuál es la más apropiada resulta ser una tarea ardua que requiere el uso de diversos métodos para no tomar esta decisión a la ligera.
+
+### 3.1 Matriz de correlación.
+
+Esta matriz nos permite identificar la presencia de multicolinealidad al analizar gráficamente la correlación entre todas las variables cuantitativas de la base de datos.
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE, fig.align='center'}
+datos_2 <- datos_2[,-c(1,23,22,21)]
+# Eliminacion de variables categoricas
+
+matriz_co <- cor(datos_2) %>% round(1) 
+
+crop_matco <- datos_2 %>% cor_pmat()
+
+matriz_co %>% ggcorrplot(method = "circle")
+
+datos_3 <- datos_2[,-1]
+```
+
+Con estos resultados, logramos identificar qué variables presentan una correlación más fuerte tanto con la variable 'esperanza de vida' como con el resto de las variables.
+
+### 3.2 gráficos de dispersión que relacionan la variable dependiente con las variables independientes.
+
+```{r}
+selectInput('xcol', 'Variables independientes', names(datos_3))
+plotOutput("displot1")
+
+```
+
+```{r}
+#| context: server
+output$displot1 <- renderPlot({
+  library(tidyverse)
+  datos_2 <- read.csv("Japan_life_expectancy.csv", header = T)
+  x <- input$xcol
+  dp<- datos_2[,x]
+  lb <- as.character(input$xcol)
+  datos_2 |> ggplot(aes(x=dp, y=datos_2$Life_expectancy))+ 
+  geom_point(shape= 24, color ="black", fill="#4FA6B0", size=3)+
+  labs(y="Experanza de vida", x = lb)+
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.position = "none")
+})
+```
+
+## 4. contrucción del modelo y selección de variables.
+
+### 4.1 forward selection.
+
+El método de selección hacia adelante con el criterio AIC consiste en construir un modelo de regresión partiendo de un modelo sin variables predictoras y luego añadir gradualmente las variables más relevantes. En cada paso, se selecciona la variable que produce la mayor reducción en el AIC, equilibrando el ajuste del modelo y la complejidad. Se repiten estas iteraciones hasta que agregar más variables no resulta en una mejora significativa en el AIC. Esto busca encontrar un conjunto de variables que proporcione un buen ajuste mientras penaliza la complejidad excesiva.
+
+```{r, warning=FALSE,echo=FALSE,message=FALSE, results='hide'}
+modelo <- lm(Life_expectancy~., data = datos_2)
+summary(modelo)
+
+#Metodo metfoward para selecciona de variables
+
+modelo_vacio <- lm(Life_expectancy~1,data=datos_2)
+summary(modelo_vacio)
+
+met_forward <- step(modelo_vacio, 
+                    scope = list(lower=modelo_vacio, upper=modelo),
+                    direction = "forward")
+```
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+summary(met_forward)
+```
+
+El modelo de regresión lineal resultante de la selección hacia adelante, utilizando el criterio AIC, revela que la expectativa de vida está positivamente relacionada con variables como la disponibilidad de parques, la presencia universitaria y el número de enfermeras. Por otro lado, la densidad poblacional y el número de camas hospitalarias muestran un efecto negativo en la expectativa de vida. Aunque algunas variables, como la educación a nivel secundario y las instalaciones deportivas, tienen influencias menos claras y no alcanzan una significancia estadística convencional, el modelo en su conjunto explica alrededor del 74.87% de la variabilidad en la expectativa de vida. Su coeficiente R cuadrado indica un ajuste moderado, que podría estar ligeramente penalizado debido a la cantidad de variables en el modelo. Además, el valor del estadístico F es relativamente pequeño, lo que sugiere que al menos una de estas variables es significativa para la variable de respuesta.
+
+En estos casos, es recomendable realizar comparaciones con otros modelos construidos. En esta ocasión, utilizaremos la correlación como criterio de selección.
+
+### 4.2 Variables con mas correlación.
+
+las variables que arrojaron una mayor correlacion fueron:
+
+* "Physican"
+* "Junior_col"
+* "University"
+* "Salary"
+* "Elementary_school"
+* "Ambulance"
+
+Entonces el nuevo modelo se construira en base a esas nuevas variables.
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+modelo2 <- lm(datos_2$Life_expectancy~datos_2$Physician+
+                datos_2$Junior_col+datos_2$University+
+                datos_2$Salary+datos_2$Elementary_school+
+                datos_2$Ambulances, data = datos_2)
+summary(modelo2)
+```
+
+
+Primer modelo tiene un coeficiente de determinación (R cuadrado) ajustado más alto. Esto implica que es capaz de explicar una proporción mayor de la variabilidad presente en la variable dependiente al emplear las variables independientes seleccionadas. En esta instancia, el modelo basado en el criterio de información de Akaike (AIC) muestra un ajuste superior. Sin embargo, es importante mencionar que su estadístico F es de un valor muy pequeño. Esto señala que al menos una variable está influyendo en la variable dependiente. A pesar de esto, muchas de estas variables no parecen ser significativas, a pesar de tener una correlación alta.
+
+Como información adicional, es válido notar que debido a la naturaleza de los datos, este tipo de modelos son mucho más efectivos para predecir valores que caen dentro del rango de datos históricos observados. Es decir, estos modelos solo son aplicables en el contexto japonés.
+
+## 5. Referencias.
+
+* Uriel, E. (2013). Regresión lineal múltiple: estimación y propiedades. Universidad de Valencia Versión, 09-2013.
+
+* Bauer, P. C., & Landesvatter, C. (2023). Writing a reproducible paper with RStudio and Quarto.
+
+* Abuín, J. R. (2007). Regresión lineal múltiple. IdEyGdM-Ld Estadística, Editor, 32.
+
+* Wickham, H. (2021). Mastering shiny. " O'Reilly Media, Inc.".
+
+
+
+
